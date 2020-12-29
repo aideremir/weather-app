@@ -1,18 +1,56 @@
 <template>
   <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+    <CurrentWeather v-if="!errorMessage && currentWeather" :data="currentWeather" />
+    <ErrorMessage v-else-if="errorMessage" :message="errorMessage" />
+    <Spinner v-else />
   </div>
 </template>
 
 <script lang="ts">
 import Vue from 'vue';
-import HelloWorld from '@/components/HelloWorld.vue'; // @ is an alias to /src
+import CurrentWeather from '@/components/CurrentWeather.vue';
+import ErrorMessage from '@/components/ErrorMessage.vue';
+import Spinner from '@/components/Spinner.vue';
+import {WeatherAPI} from "@/utils/weatherAPI";
+import {CurrentWeatherType} from "@/types/currentWeatherType";
+import {ErrorMessages} from "@/types/errorMessages";
 
 export default Vue.extend({
   name: 'Home',
   components: {
-    HelloWorld,
+    CurrentWeather,
+    ErrorMessage,
+    Spinner
   },
+  data: () => ({
+    currentWeather: null as CurrentWeatherType,
+    errorMessage: '' as string
+  }),
+  mounted() {
+    this.getCoords();
+  },
+  methods: {
+    getCoords() {
+      if (navigator.geolocation) {
+        navigator.geolocation
+            .getCurrentPosition(
+                this.getWeather,
+                () => this.setErrorMessage(ErrorMessages.GEOLOCATION_IS_NOT_ALLOWED)
+            )
+      } else {
+        this.setErrorMessage(ErrorMessages.NO_GEOLOCATION_API)
+      }
+    },
+    async getWeather(position: Position) {
+      const weatherAPI = new WeatherAPI();
+      this.currentWeather = await weatherAPI.getCurrentByCoords(position.coords.latitude, position.coords.longitude);
+      if (this.currentWeather === null) {
+        this.setErrorMessage(ErrorMessages.WEATHER_API_ERROR)
+      }
+    },
+    setErrorMessage(msg: string) {
+      this.errorMessage = msg;
+    }
+  }
 });
 </script>
